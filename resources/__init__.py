@@ -6,5 +6,5 @@ including automatic PDF conversion and bidirectional file synchronization.
 """
 
 __version__ = "1.2.0"
-__author__ = "readMarkable team"
+__author__ = "wowitsjack"
 __description__ = "Markdown synchronization for reMarkable devices"

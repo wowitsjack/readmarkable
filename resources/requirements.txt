@@ -9,9 +9,12 @@ markdown>=3.5.0
 weasyprint>=61.0
 reportlab>=4.0.0
 
+# GUI and system integration
+tkinterdnd2>=0.3.0
+plyer>=2.1
+
 # Additional utilities
 python-dateutil>=2.8.0
 Pillow>=10.0.0
-plyer>=2.1
 
 # File dialogs handled by Kivy/KivyMD components
