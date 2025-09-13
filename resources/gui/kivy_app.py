@@ -423,7 +423,7 @@ class ReMarkableUploaderApp(MDApp):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.title = "ReMarkable File Uploader"
+        self.title = "readMarkable File Manager"
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
         

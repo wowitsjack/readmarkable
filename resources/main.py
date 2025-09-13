@@ -81,7 +81,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="readMarkable 1.0.0"
+        version="readMarkable 1.2.0"
     )
     
     return parser.parse_args()

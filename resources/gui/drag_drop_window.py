@@ -404,7 +404,7 @@ class ReMarkableFilePusher(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
         
-        self.title("ReMarkable File Pusher")
+        self.title("readMarkable File Manager")
         self.geometry("900x600")
         self.configure(bg='#1e1e1e')
         
