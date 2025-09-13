@@ -1,0 +1,17 @@
+# Core dependencies
+kivy>=2.1.0
+kivymd>=1.1.1
+paramiko>=3.4.0
+watchdog>=4.0.0
+markdown>=3.5.0
+
+# PDF conversion dependencies
+weasyprint>=61.0
+reportlab>=4.0.0
+
+# Additional utilities
+python-dateutil>=2.8.0
+Pillow>=10.0.0
+plyer>=2.1
+
+# File dialogs handled by Kivy/KivyMD components
