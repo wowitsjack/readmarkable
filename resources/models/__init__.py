@@ -1,5 +1,5 @@
 """
-Models module for readmarkable.
+Models module for readMarkable.
 
 Provides data models for device management and sync state tracking.
 """

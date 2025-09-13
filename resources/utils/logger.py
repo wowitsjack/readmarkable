@@ -1,5 +1,5 @@
 """
-Logging system for readmarkable.
+Logging system for readMarkable.
 
 This module provides a custom logger with colored output,
 multiple log levels, file logging, and GUI log handler interfaces.
@@ -15,7 +15,7 @@ from enum import Enum
 
 
 class LogLevel(Enum):
-    """Custom log levels for readmarkable."""
+    """Custom log levels for readMarkable."""
     DEBUG = 10
     INFO = 20
     WARNING = 30
@@ -152,7 +152,7 @@ class GUILogHandler(logging.Handler):
 
 class ReadmarkableLogger:
     """
-    Custom logger for readmarkable application.
+    Custom logger for readMarkable application.
     
     Provides logging functions for markdown synchronization operations:
     - log() - Main logging with timestamp
@@ -162,11 +162,11 @@ class ReadmarkableLogger:
     - highlight() - Sync/highlight messages
     """
     
-    def __init__(self, name: str = "readmarkable", 
+    def __init__(self, name: str = "readMarkable", 
                  colored: bool = True,
                  log_file: Optional[Path] = None):
         """
-        Initialize readmarkable logger.
+        Initialize readMarkable logger.
         
         Args:
             name: Logger name
@@ -408,7 +408,7 @@ def get_logger() -> ReadmarkableLogger:
     return _global_logger
 
 
-def setup_logging(name: str = "readmarkable",
+def setup_logging(name: str = "readMarkable",
                  colored: bool = True,
                  log_file: Optional[Path] = None,
                  level: LogLevel = LogLevel.INFO) -> ReadmarkableLogger:
@@ -447,7 +447,7 @@ def configure_from_config(config: Any) -> ReadmarkableLogger:
     
     log_file = None
     if hasattr(config, 'get_logs_directory'):
-        log_file = config.get_logs_directory() / 'readmarkable.log'
+        log_file = config.get_logs_directory() / 'readMarkable.log'
     
     return setup_logging(
         colored=colored,

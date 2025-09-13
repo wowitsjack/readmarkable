@@ -1,5 +1,5 @@
 """
-Services module for readmarkable.
+Services module for readMarkable.
 
 Provides core services for network communication, file operations, and markdown processing.
 """

@@ -1,5 +1,5 @@
 """
-Input validation utilities for readmarkable.
+Input validation utilities for readMarkable.
 
 This module provides validation functions for IP addresses, passwords,
 file paths, network connectivity, and markdown sync operations.
@@ -38,7 +38,7 @@ class ValidationResult:
 
 class Validator:
     """
-    Comprehensive validator class for readmarkable.
+    Comprehensive validator class for readMarkable.
     
     Provides validation methods for various input types including
     IP addresses, passwords, file paths, markdown files, and network connectivity.

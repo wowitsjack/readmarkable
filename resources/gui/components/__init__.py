@@ -1,5 +1,5 @@
 """
-GUI components module for readmarkable.
+GUI components module for readMarkable.
 
 Provides reusable GUI components and widgets.
 """

@@ -1,5 +1,5 @@
 """
-Configuration management system for readmarkable.
+Configuration management system for readMarkable.
 
 This module handles application settings, user preferences, default values,
 and configuration file loading/saving for markdown synchronization operations.
@@ -37,7 +37,7 @@ class NetworkConfig:
 class SyncConfig:
     """Markdown synchronization configuration."""
     local_sync_dir: str = "sync"
-    remote_sync_dir: str = "/home/root/readmarkable_sync"
+    remote_sync_dir: str = "/home/root/readMarkable_sync"
     watch_for_changes: bool = True
     auto_sync_interval: int = 30  # seconds
     sync_on_startup: bool = True
@@ -145,7 +145,7 @@ class AppConfig:
     
     # Application metadata
     version: str = "1.0.0"
-    app_name: str = "readmarkable"
+    app_name: str = "readMarkable"
     config_version: str = "1.0"
     
     # Runtime settings
@@ -207,7 +207,7 @@ class AppConfig:
         else:  # Unix-like
             config_base = Path(os.environ.get('XDG_CONFIG_HOME', '~/.config')).expanduser()
         
-        return config_base / 'readmarkable'
+        return config_base / 'readMarkable'
     
     def get_config_file_path(self) -> Path:
         """Get the path to the configuration file."""
@@ -346,7 +346,7 @@ class AppConfig:
             device=device_config,
             ui=ui_config,
             version=config_dict.get('version', '1.0.0'),
-            app_name=config_dict.get('app_name', 'readmarkable'),
+            app_name=config_dict.get('app_name', 'readMarkable'),
             config_version=config_dict.get('config_version', '1.0'),
             debug_mode=config_dict.get('debug_mode', False),
             log_level=config_dict.get('log_level', LogLevel.INFO)

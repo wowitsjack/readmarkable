@@ -1,5 +1,5 @@
 """
-File service for readmarkable.
+File service for readMarkable.
 
 This module handles file operations including markdown file discovery,
 file watching, backup management, and file system utilities.

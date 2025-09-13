@@ -1,6 +1,6 @@
-# readmarkable
+# readMarkable
 
-![readmarkable](resources/image.png)
+![readMarkable](resources/image.png)
 
 A GUI application for synchronizing markdown files with reMarkable devices, including automatic PDF conversion and bidirectional file synchronization.
 
@@ -10,7 +10,7 @@ A GUI application for synchronizing markdown files with reMarkable devices, incl
 - **Markdown Sync**: Bidirectional synchronization of markdown files
 - **PDF Conversion**: Automatic conversion of markdown files to PDF using WeasyPrint or ReportLab
 - **File Watching**: Real-time monitoring of local directory changes
-- **Modern GUI**: Clean interface built with CustomTkinter (falls back to standard Tkinter)
+- **Modern GUI**: Clean interface built with Kivy
 - **Comprehensive Logging**: Detailed logging for debugging and monitoring
 
 ## Requirements
@@ -21,7 +21,7 @@ A GUI application for synchronizing markdown files with reMarkable devices, incl
 
 ## Installation
 
-1. Clone or download the readmarkable project
+1. Clone or download the readMarkable project
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
@@ -62,7 +62,7 @@ The application uses a configuration system that stores settings in JSON format.
 ## Project Structure
 
 ```
-readmarkable/
+readMarkable/
 ├── main.py              # Application entry point
 ├── requirements.txt     # Python dependencies
 ├── config/
@@ -93,7 +93,7 @@ readmarkable/
 
 2. **Connect to Device**:
    - Connect reMarkable via USB cable or ensure WiFi connection
-   - Launch readmarkable application
+   - Launch readMarkable application
    - Enter device IP and SSH password in the Device tab
    - Click Connect
 

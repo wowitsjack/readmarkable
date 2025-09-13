@@ -1,5 +1,5 @@
 """
-Device model and data structures for readmarkable.
+Device model and data structures for readMarkable.
 
 This module contains the Device class representing reMarkable tablet state,
 connection info, and validation methods for markdown synchronization.

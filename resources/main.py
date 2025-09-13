@@ -1,5 +1,5 @@
 """
-Main entry point for readmarkable GUI application.
+Main entry point for readMarkable GUI application.
 
 This module initializes the configuration, logging, and launches the main GUI
 for markdown synchronization with reMarkable devices.
@@ -26,7 +26,7 @@ from models.device import Device
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="readmarkable - Markdown sync for reMarkable devices",
+        description="readMarkable - Markdown sync for reMarkable devices",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -81,7 +81,7 @@ Examples:
     parser.add_argument(
         "--version",
         action="version",
-        version="readmarkable 1.0.0"
+        version="readMarkable 1.0.0"
     )
     
     return parser.parse_args()
@@ -120,7 +120,7 @@ def setup_application(args: argparse.Namespace) -> AppConfig:
         config.sync.local_sync_dir = args.sync_dir
     
     # Setup logging
-    log_file = config.get_logs_directory() / "readmarkable.log"
+    log_file = config.get_logs_directory() / "readMarkable.log"
     setup_logging(
         colored=True,
         log_file=log_file,
@@ -128,7 +128,7 @@ def setup_application(args: argparse.Namespace) -> AppConfig:
     )
     
     logger = get_logger()
-    logger.log("Starting readmarkable application")
+    logger.log("Starting readMarkable application")
     logger.info(f"Configuration loaded from: {config.get_config_file_path()}")
     logger.info(f"Log file: {log_file}")
     

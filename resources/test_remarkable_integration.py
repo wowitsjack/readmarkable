@@ -20,7 +20,7 @@ import time
 import logging
 from typing import Dict, Any
 
-# Add the readmarkable directory to Python path
+# Add the readMarkable directory to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from services.remarkable_service import get_remarkable_service, init_remarkable_service

@@ -1,5 +1,5 @@
 """
-ReMarkable device integration service for readmarkable.
+ReMarkable device integration service for readMarkable.
 
 This module implements the core ReMarkable device operations by replicating
 the proven bash function workflow. It handles PDF/EPUB file uploads with proper

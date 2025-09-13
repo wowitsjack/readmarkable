@@ -1,5 +1,5 @@
 """
-Sync state model for readmarkable.
+Sync state model for readMarkable.
 
 This module contains classes for tracking markdown synchronization progress,
 file states, and sync operations between local and remote directories.

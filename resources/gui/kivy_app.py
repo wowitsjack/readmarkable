@@ -977,7 +977,7 @@ class ReMarkableUploaderApp(MDApp):
                     # Convert to PDF first
                     self.update_status(f"Converting {filename} to PDF...", "info")
                     
-                    output_dir = Path.home() / '.cache' / 'readmarkable'
+                    output_dir = Path.home() / '.cache' / 'readMarkable'
                     output_dir.mkdir(parents=True, exist_ok=True)
                     
                     pdf_path = self.markdown_service.process_markdown_file(file_path, output_dir)

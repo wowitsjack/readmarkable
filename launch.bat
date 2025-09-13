@@ -1,5 +1,5 @@
 @echo off
-REM Launch script for readmarkable on Windows
+REM Launch script for readMarkable on Windows
 
 REM Get the directory of this script
 set SCRIPT_DIR=%~dp0
@@ -35,7 +35,7 @@ if exist "requirements.txt" (
 )
 
 REM Launch the application
-echo Starting readmarkable...
+echo Starting readMarkable...
 python main.py
 
 REM Deactivate virtual environment when done

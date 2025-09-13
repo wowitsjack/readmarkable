@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch script for readmarkable on macOS
+# Launch script for readMarkable on macOS
 
 # Get the directory of this script
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
@@ -35,7 +35,7 @@ if [ -f "requirements.txt" ]; then
 fi
 
 # Launch the application
-echo "Starting readmarkable..."
+echo "Starting readMarkable..."
 python main.py
 
 # Deactivate virtual environment when done

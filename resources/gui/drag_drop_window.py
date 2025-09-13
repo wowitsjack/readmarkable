@@ -601,7 +601,7 @@ class ReMarkableFilePusher(TkinterDnD.Tk):
                 # Create config if it doesn't exist
                 from pathlib import Path
                 import json
-                config_dir = Path.home() / '.config' / 'readmarkable'
+                config_dir = Path.home() / '.config' / 'readMarkable'
                 config_dir.mkdir(parents=True, exist_ok=True)
                 config_file = config_dir / 'config.json'
                 
@@ -663,7 +663,7 @@ class ReMarkableFilePusher(TkinterDnD.Tk):
                     if file_path.suffix.lower() in ['.md', '.markdown']:
                         # Convert to PDF first
                         self.status_panel.add_status(f"Converting {filename} to PDF...", 'info')
-                        output_dir = Path.home() / '.cache' / 'readmarkable'
+                        output_dir = Path.home() / '.cache' / 'readMarkable'
                         output_dir.mkdir(parents=True, exist_ok=True)
                         
                         pdf_path = self.markdown_service.process_markdown_file(

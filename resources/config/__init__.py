@@ -1,5 +1,5 @@
 """
-Configuration module for readmarkable.
+Configuration module for readMarkable.
 
 Provides application configuration management and settings.
 """

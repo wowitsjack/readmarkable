@@ -1,5 +1,5 @@
 """
-Network service for readmarkable.
+Network service for readMarkable.
 
 This module provides SSH/SCP operations with paramiko, connection management,
 remote command execution, and file transfer with progress tracking for markdown sync operations.

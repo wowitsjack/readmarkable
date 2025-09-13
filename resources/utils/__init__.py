@@ -1,5 +1,5 @@
 """
-Utilities module for readmarkable.
+Utilities module for readMarkable.
 
 Provides logging, validation, and utility functions.
 """

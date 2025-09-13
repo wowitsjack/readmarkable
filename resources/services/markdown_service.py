@@ -1,5 +1,5 @@
 """
-Markdown processing service for readmarkable.
+Markdown processing service for readMarkable.
 
 This module handles markdown to PDF conversion, content processing,
 and document formatting for reMarkable devices.
