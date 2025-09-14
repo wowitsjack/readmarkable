@@ -85,18 +85,19 @@ class ReMarkableService:
         }
         return json.dumps(content)
     
-    def add_pdf_with_metadata(self, local_pdf_path: Path, title: Optional[str] = None) -> Optional[str]:
+    def add_pdf_with_metadata(self, local_pdf_path: Path, title: Optional[str] = None, restart_xochitl: bool = True) -> Optional[str]:
         """
         Add PDF to ReMarkable with metadata (replicates addPdfWithMetadata bash function).
         
         Original bash logic:
-        cp $1 ~/xochitl-data && 
+        cp $1 ~/xochitl-data &&
         echo "{'parent':'','type':'DocumentType','visibleName':'$1'}" | sed s/\\'/\\\"/g > ~/xochitl-data/`echo $1 | sed "s/.pdf//""`.metadata;
         echo '{ "fileType": "pdf" }' > ~/xochitl-data/`echo $1 | sed "s/.pdf//""`.content;
         
         Args:
             local_pdf_path: Path to local PDF file
             title: Document title (defaults to filename without extension)
+            restart_xochitl: Whether to restart xochitl service after adding
             
         Returns:
             Document UUID if successful, None otherwise
@@ -141,9 +142,10 @@ class ReMarkableService:
                 self._logger.error(f"Failed to create content file: {result.stderr}")
                 return None
             
-            # Step 4: Restart xochitl service
-            if not self._restart_xochitl():
-                self._logger.warning("Failed to restart xochitl service")
+            # Step 4: Restart xochitl service if requested
+            if restart_xochitl:
+                if not self._restart_xochitl():
+                    self._logger.warning("Failed to restart xochitl service")
             
             self._logger.info(f"Successfully added PDF: {title} (UUID: {document_uuid})")
             return document_uuid
@@ -152,7 +154,7 @@ class ReMarkableService:
             self._logger.error(f"Error adding PDF with metadata: {e}")
             return None
     
-    def add_epub_with_metadata(self, local_epub_path: Path, title: Optional[str] = None) -> Optional[str]:
+    def add_epub_with_metadata(self, local_epub_path: Path, title: Optional[str] = None, restart_xochitl: bool = True) -> Optional[str]:
         """
         Add EPUB to ReMarkable with metadata (replicates addEpubWithMetadata bash function).
         
@@ -161,6 +163,7 @@ class ReMarkableService:
         Args:
             local_epub_path: Path to local EPUB file
             title: Document title (defaults to filename without extension)
+            restart_xochitl: Whether to restart xochitl service after adding
             
         Returns:
             Document UUID if successful, None otherwise
@@ -205,9 +208,10 @@ class ReMarkableService:
                 self._logger.error(f"Failed to create content file: {result.stderr}")
                 return None
             
-            # Step 4: Restart xochitl service
-            if not self._restart_xochitl():
-                self._logger.warning("Failed to restart xochitl service")
+            # Step 4: Restart xochitl service if requested
+            if restart_xochitl:
+                if not self._restart_xochitl():
+                    self._logger.warning("Failed to restart xochitl service")
             
             self._logger.info(f"Successfully added EPUB: {title} (UUID: {document_uuid})")
             return document_uuid
@@ -266,13 +270,14 @@ class ReMarkableService:
             self._logger.error(f"Error searching for title '{title}': {e}")
             return None
     
-    def add_with_metadata_if_new(self, local_file_path: Path, title: Optional[str] = None) -> Optional[str]:
+    def add_with_metadata_if_new(self, local_file_path: Path, title: Optional[str] = None, restart_xochitl: bool = True) -> Optional[str]:
         """
         Add file with metadata only if it doesn't already exist (replicates addWithMetadataIfNew bash function).
         
         Args:
             local_file_path: Path to local file
             title: Document title (defaults to filename without extension)
+            restart_xochitl: Whether to restart xochitl service after adding
             
         Returns:
             Document UUID if added or already exists, None if error
@@ -289,9 +294,9 @@ class ReMarkableService:
         # Add new document based on file type
         file_ext = local_file_path.suffix.lower()
         if file_ext == ".pdf":
-            return self.add_pdf_with_metadata(local_file_path, title)
+            return self.add_pdf_with_metadata(local_file_path, title, restart_xochitl)
         elif file_ext == ".epub":
-            return self.add_epub_with_metadata(local_file_path, title)
+            return self.add_epub_with_metadata(local_file_path, title, restart_xochitl)
         else:
             self._logger.error(f"Unsupported file type: {file_ext}")
             return None
@@ -614,6 +619,57 @@ class ReMarkableService:
         except Exception as e:
             self._logger.error(f"Error downloading document {document_uuid}: {e}")
             return False
+    
+    def batch_delete_documents(self, document_uuids: List[str]) -> Tuple[List[str], List[str]]:
+        """
+        Delete multiple documents in batch, restarting xochitl only once at the end.
+        
+        Args:
+            document_uuids: List of document UUIDs to delete
+            
+        Returns:
+            Tuple of (successfully_deleted_uuids, failed_uuids)
+        """
+        if not document_uuids:
+            return [], []
+        
+        self._logger.info(f"Starting batch delete of {len(document_uuids)} documents")
+        
+        successful_deletes = []
+        failed_deletes = []
+        
+        for document_uuid in document_uuids:
+            if not document_uuid.strip():
+                self._logger.error("Document UUID cannot be empty")
+                failed_deletes.append(document_uuid)
+                continue
+            
+            try:
+                self._logger.debug(f"Deleting document files for UUID: {document_uuid}")
+                
+                # Delete all files associated with the document (without restarting xochitl)
+                delete_command = f"cd {self.xochitl_share_path} && rm -f {document_uuid}.*"
+                result = self._execute_command(delete_command)
+                
+                if result.success:
+                    successful_deletes.append(document_uuid)
+                    self._logger.debug(f"Successfully deleted files for document: {document_uuid}")
+                else:
+                    failed_deletes.append(document_uuid)
+                    self._logger.error(f"Failed to delete document files for {document_uuid}: {result.stderr}")
+                    
+            except Exception as e:
+                failed_deletes.append(document_uuid)
+                self._logger.error(f"Error deleting document {document_uuid}: {e}")
+        
+        # Restart xochitl service once at the end
+        if successful_deletes:
+            if self._restart_xochitl():
+                self._logger.info(f"Batch delete complete: {len(successful_deletes)} deleted, {len(failed_deletes)} failed")
+            else:
+                self._logger.warning("Failed to restart xochitl service after batch delete")
+        
+        return successful_deletes, failed_deletes
 
 
 # Global service instance

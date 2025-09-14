@@ -77,9 +77,11 @@ class EnhancedListItem(TwoLineListItem):
         self.checkbox = MDCheckbox(
             size_hint=(None, None),
             size=(dp(30), dp(30)),
-            pos_hint={'center_y': 0.5, 'right': 1},
-            on_active=self.on_checkbox_active
+            pos_hint={'center_y': 0.5, 'right': 1}
         )
+        
+        # Bind the callback manually to ensure it works
+        self.checkbox.bind(active=self.on_checkbox_active)
         
         # Use the built-in right area for the checkbox
         self.add_widget(self.checkbox)
@@ -89,12 +91,22 @@ class EnhancedListItem(TwoLineListItem):
         self.selected = value
         # Update app's selection tracking
         if self.item_type == 'device':
+            uuid = self.item_data.get('uuid')
+            doc_title = self.item_data.get('title', 'Unknown')
             if value:
-                if self.item_data not in self.app_instance.selected_device_files:
+                # Use UUID for comparison to avoid dict identity issues
+                if not any(doc.get('uuid') == uuid for doc in self.app_instance.selected_device_files):
                     self.app_instance.selected_device_files.append(self.item_data)
+                print(f"DEBUG: Selected device file '{doc_title}' (UUID: {uuid})")
+                print(f"DEBUG: Total selected device files: {len(self.app_instance.selected_device_files)}")
             else:
-                if self.item_data in self.app_instance.selected_device_files:
-                    self.app_instance.selected_device_files.remove(self.item_data)
+                # Remove by UUID matching
+                self.app_instance.selected_device_files = [
+                    doc for doc in self.app_instance.selected_device_files
+                    if doc.get('uuid') != uuid
+                ]
+                print(f"DEBUG: Deselected device file '{doc_title}' (UUID: {uuid})")
+                print(f"DEBUG: Total selected device files: {len(self.app_instance.selected_device_files)}")
         else:  # upload queue
             if value:
                 if self.item_data not in self.app_instance.selected_upload_files:
@@ -631,24 +643,16 @@ class ReMarkableUploaderApp(MDApp):
         )
         actions_layout.add_widget(clear_btn)
         
-        # Batch operations
-        select_all_btn = MDRaisedButton(
-            text="SELECT ALL",
-            size_hint_x=0.15,
-            on_release=self.select_all_files
-        )
-        actions_layout.add_widget(select_all_btn)
-        
-        batch_delete_btn = MDRaisedButton(
-            text="BATCH DELETE",
+        delete_btn = MDRaisedButton(
+            text="DELETE SELECTED",
             size_hint_x=0.15,
             md_bg_color=[0.8, 0.2, 0.2, 1],  # Red color
-            on_release=self.batch_delete_selected
+            on_release=self.delete_selected_files
         )
-        actions_layout.add_widget(batch_delete_btn)
+        actions_layout.add_widget(delete_btn)
         
         # Spacer
-        actions_layout.add_widget(MDLabel(size_hint_x=0.1))
+        actions_layout.add_widget(MDLabel(size_hint_x=0.25))
         
         layout.add_widget(actions_layout)
         
@@ -659,14 +663,24 @@ class ReMarkableUploaderApp(MDApp):
         queue_card = MDCard(elevation=2, padding=dp(10))
         queue_layout = MDBoxLayout(orientation='vertical', spacing=dp(5))
         
+        # Queue title with select all checkbox
+        queue_header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
+        
         queue_title = MDLabel(
             text="Upload Queue",
             theme_text_color="Primary",
-            font_style="Subtitle1",
-            size_hint_y=None,
-            height=dp(30)
+            font_style="Subtitle1"
         )
-        queue_layout.add_widget(queue_title)
+        queue_header.add_widget(queue_title)
+        
+        self.queue_select_all = MDCheckbox(
+            size_hint=(None, None),
+            size=(dp(30), dp(30))
+        )
+        self.queue_select_all.bind(active=self.on_queue_select_all)
+        queue_header.add_widget(self.queue_select_all)
+        
+        queue_layout.add_widget(queue_header)
         
         queue_scroll = MDScrollView()
         self.upload_list = MDList()
@@ -680,14 +694,24 @@ class ReMarkableUploaderApp(MDApp):
         device_card = MDCard(elevation=2, padding=dp(10))
         device_layout = MDBoxLayout(orientation='vertical', spacing=dp(5))
         
+        # Device title with select all checkbox
+        device_header = MDBoxLayout(orientation='horizontal', size_hint_y=None, height=dp(30))
+        
         device_title = MDLabel(
             text="Device Files",
-            theme_text_color="Primary", 
-            font_style="Subtitle1",
-            size_hint_y=None,
-            height=dp(30)
+            theme_text_color="Primary",
+            font_style="Subtitle1"
         )
-        device_layout.add_widget(device_title)
+        device_header.add_widget(device_title)
+        
+        self.device_select_all = MDCheckbox(
+            size_hint=(None, None),
+            size=(dp(30), dp(30))
+        )
+        self.device_select_all.bind(active=self.on_device_select_all)
+        device_header.add_widget(self.device_select_all)
+        
+        device_layout.add_widget(device_header)
         
         device_scroll = MDScrollView()
         self.device_files_list = MDList()
@@ -821,11 +845,10 @@ class ReMarkableUploaderApp(MDApp):
             filechooser.open_file(
                 title="Select Files to Upload",
                 filters=[
-                    ("Supported Files", "*.md;*.markdown;*.pdf;*.epub"),
-                    ("Markdown Files", "*.md;*.markdown"),
-                    ("PDF Files", "*.pdf"),
-                    ("EPUB Files", "*.epub"),
-                    ("All Files", "*.*")
+                    ["Markdown Files", "*.md", "*.markdown"],
+                    ["PDF Files", "*.pdf"],
+                    ["EPUB Files", "*.epub"],
+                    ["All Supported Files", "*.md", "*.markdown", "*.pdf", "*.epub"]
                 ],
                 multiple=True,
                 on_selection=self._on_files_selected
@@ -955,11 +978,11 @@ class ReMarkableUploaderApp(MDApp):
         self.upload_selected_files(*args)
     
     def _upload_worker(self):
-        """Background worker for file uploads."""
+        """Background worker for file uploads with batch xochitl restart."""
         total_files = len(self.upload_queue)
         uploaded_files = []
         
-        Clock.schedule_once(lambda dt: self.update_status(f"Starting upload of {total_files} file(s)...", "info"), 0)
+        Clock.schedule_once(lambda dt: self.update_status(f"Starting batch upload of {total_files} file(s)...", "info"), 0)
         
         for i, file_path in enumerate(self.upload_queue):
             try:
@@ -971,6 +994,9 @@ class ReMarkableUploaderApp(MDApp):
                 filename = file_path.name
                 
                 self.update_status(f"Processing {filename}...", "info")
+                
+                # Determine if this is the last file to restart xochitl only once
+                is_last_file = (i == total_files - 1)
                 
                 # Handle different file types
                 if file_path.suffix.lower() in ['.md', '.markdown']:
@@ -985,7 +1011,8 @@ class ReMarkableUploaderApp(MDApp):
                     if pdf_path:
                         Clock.schedule_once(lambda dt: self.update_status("Uploading PDF to ReMarkable...", "info"), 0)
                         title = file_path.stem
-                        uuid = self.remarkable_service.add_with_metadata_if_new(pdf_path, title)
+                        # Only restart xochitl on the last file
+                        uuid = self.remarkable_service.add_with_metadata_if_new(pdf_path, title, restart_xochitl=is_last_file)
                         
                         if uuid:
                             uploaded_files.append(file_path)
@@ -999,9 +1026,9 @@ class ReMarkableUploaderApp(MDApp):
                         Clock.schedule_once(lambda dt: self.update_status(f"Failed to convert {filename} to PDF", "error"), 0)
                 
                 elif file_path.suffix.lower() == '.pdf':
-                    # Direct PDF upload
+                    # Direct PDF upload - only restart xochitl on the last file
                     title = file_path.stem
-                    uuid = self.remarkable_service.add_with_metadata_if_new(file_path, title)
+                    uuid = self.remarkable_service.add_with_metadata_if_new(file_path, title, restart_xochitl=is_last_file)
                     
                     if uuid:
                         uploaded_files.append(file_path)
@@ -1010,9 +1037,9 @@ class ReMarkableUploaderApp(MDApp):
                         Clock.schedule_once(lambda dt: self.update_status(f"Failed to upload {filename}", "error"), 0)
                 
                 elif file_path.suffix.lower() == '.epub':
-                    # EPUB upload
+                    # EPUB upload - only restart xochitl on the last file
                     title = file_path.stem
-                    uuid = self.remarkable_service.add_epub_with_metadata(file_path, title)
+                    uuid = self.remarkable_service.add_epub_with_metadata(file_path, title, restart_xochitl=is_last_file)
                     
                     if uuid:
                         uploaded_files.append(file_path)
@@ -1021,16 +1048,17 @@ class ReMarkableUploaderApp(MDApp):
                         Clock.schedule_once(lambda dt: self.update_status(f"Failed to upload {filename}", "error"), 0)
             
             except Exception as error:
-                Clock.schedule_once(lambda dt: self.update_status(f"Error uploading {filename}: {str(error)}", "error"), 0)
+                Clock.schedule_once(lambda dt, err=str(error), fname=filename: self.update_status(f"Error uploading {fname}: {err}", "error"), 0)
         
         # Upload complete
         Clock.schedule_once(lambda dt: setattr(self.progress_bar, 'value', 100), 0)
-        Clock.schedule_once(lambda dt: self.update_status(f"Upload complete: {len(uploaded_files)}/{total_files} files", "success"), 0)
+        Clock.schedule_once(lambda dt: self.update_status(f"Batch upload complete: {len(uploaded_files)}/{total_files} files (xochitl restarted once)", "success"), 0)
         
         # Clear uploaded files from queue
         for file_path in uploaded_files:
-            if file_path in self.upload_queue:
-                self.upload_queue.remove(file_path)
+            file_path_str = str(file_path)
+            if file_path_str in self.upload_queue:
+                self.upload_queue.remove(file_path_str)
         
         Clock.schedule_once(lambda dt: self.update_upload_list(), 0)
         Clock.schedule_once(lambda dt: self.refresh_device_files(), 0)
@@ -1070,14 +1098,19 @@ class ReMarkableUploaderApp(MDApp):
                 secondary_text=str(file_path_obj.parent)
             )
             
+            # Restore checkbox state if this item was previously selected
+            if file_path in self.selected_upload_files:
+                item.checkbox.active = True
+                item.selected = True
+            
             self.upload_list.add_widget(item)
     
     def update_device_files_list(self):
         """Update the device files list display."""
         self.device_files_list.clear_widgets()
         
-        # Clear selections when refreshing
-        self.selected_device_files.clear()
+        # Don't clear selections when refreshing - only clear when explicitly needed
+        # self.selected_device_files.clear()
         
         if not self.device_files:
             no_files_item = OneLineListItem(text="No documents found on device")
@@ -1097,6 +1130,13 @@ class ReMarkableUploaderApp(MDApp):
                 text=f"{title} ({file_type.upper()})",
                 secondary_text=f"UUID: {uuid[:8]}...{uuid[-8:]}" if len(uuid) > 16 else f"UUID: {uuid}"
             )
+            
+            # Restore checkbox state if this item was previously selected
+            # Use UUID for comparison to avoid dict identity issues
+            uuid = doc.get('uuid')
+            if any(selected_doc.get('uuid') == uuid for selected_doc in self.selected_device_files):
+                item.checkbox.active = True
+                item.selected = True
             
             self.device_files_list.add_widget(item)
     
@@ -1135,114 +1175,210 @@ class ReMarkableUploaderApp(MDApp):
         )
         dialog.open()
     
-    def select_all_files(self, *args):
-        """Select or deselect all files in device list."""
-        if not self.device_files:
-            return
-        
-        # Check if all files are currently selected
-        all_selected = len(self.selected_device_files) == len(self.device_files)
-        
-        # Toggle selection state
-        if all_selected:
-            # Deselect all
-            self.selected_device_files.clear()
-            for child in self.device_files_list.children:
+    def on_queue_select_all(self, checkbox, value):
+        """Handle select all checkbox for upload queue."""
+        if value:
+            # Select all files in upload queue
+            self.selected_upload_files = self.upload_queue.copy()
+            for child in self.upload_list.children:
+                if hasattr(child, 'checkbox'):
+                    child.checkbox.active = True
+            self.update_status(f"Selected all {len(self.upload_queue)} files in upload queue", "info")
+        else:
+            # Deselect all files in upload queue
+            self.selected_upload_files.clear()
+            for child in self.upload_list.children:
                 if hasattr(child, 'checkbox'):
                     child.checkbox.active = False
-            self.update_status("Deselected all files", "info")
-        else:
-            # Select all
+            self.update_status("Deselected all files in upload queue", "info")
+    
+    def on_device_select_all(self, checkbox, value):
+        """Handle select all checkbox for device files."""
+        if value:
+            # Select all files in device list
             self.selected_device_files = self.device_files.copy()
             for child in self.device_files_list.children:
                 if hasattr(child, 'checkbox'):
                     child.checkbox.active = True
-            self.update_status(f"Selected {len(self.device_files)} files", "info")
+            self.update_status(f"Selected all {len(self.device_files)} files on device", "info")
+        else:
+            # Deselect all files in device list
+            self.selected_device_files.clear()
+            for child in self.device_files_list.children:
+                if hasattr(child, 'checkbox'):
+                    child.checkbox.active = False
+            self.update_status("Deselected all files on device", "info")
     
-    def batch_delete_selected(self, *args):
-        """Delete all selected device files."""
-        if not self.selected_device_files:
+    def delete_selected_files(self, *args):
+        """Ask user which list to delete from and perform deletion."""
+        # Check which lists have selections
+        has_queue_selections = len(self.selected_upload_files) > 0
+        has_device_selections = len(self.selected_device_files) > 0
+        
+        print(f"DEBUG: delete_selected_files called")
+        print(f"DEBUG: selected_upload_files: {len(self.selected_upload_files)} items")
+        print(f"DEBUG: selected_device_files: {len(self.selected_device_files)} items")
+        
+        if not has_queue_selections and not has_device_selections:
             self.show_error("No files selected for deletion")
             return
         
-        if not self.is_connected:
-            self.show_error("Please connect to device first")
-            return
+        # Create selection dialog
+        content = MDBoxLayout(orientation='vertical', spacing=dp(10))
         
-        # Create confirmation dialog
+        # Add info label
+        info_text = "Which files would you like to delete?"
+        if has_queue_selections:
+            info_text += f"\n• {len(self.selected_upload_files)} files selected in upload queue"
+        if has_device_selections:
+            info_text += f"\n• {len(self.selected_device_files)} files selected on device"
+        
+        info_label = MDLabel(
+            text=info_text,
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height=dp(80)
+        )
+        content.add_widget(info_label)
+        
+        # Create buttons for different options
+        buttons = []
+        
+        if has_queue_selections:
+            buttons.append(MDRaisedButton(
+                text=f"REMOVE FROM QUEUE ({len(self.selected_upload_files)})",
+                on_release=lambda x: self._delete_from_queue(dialog)
+            ))
+        
+        if has_device_selections:
+            if not self.is_connected:
+                buttons.append(MDRaisedButton(
+                    text="DELETE FROM DEVICE (NOT CONNECTED)",
+                    disabled=True
+                ))
+            else:
+                buttons.append(MDRaisedButton(
+                    text=f"DELETE FROM DEVICE ({len(self.selected_device_files)})",
+                    md_bg_color=[0.8, 0.2, 0.2, 1],
+                    on_release=lambda x: self._delete_from_device(dialog)
+                ))
+        
+        buttons.append(MDRaisedButton(
+            text="CANCEL",
+            on_release=lambda x: dialog.dismiss()
+        ))
+        
+        dialog = MDDialog(
+            title="Delete Selected Files",
+            type="custom",
+            content_cls=content,
+            buttons=buttons
+        )
+        dialog.open()
+    
+    def _delete_from_queue(self, dialog):
+        """Remove selected files from upload queue."""
+        dialog.dismiss()
+        
+        removed_count = len(self.selected_upload_files)
+        for file_path in self.selected_upload_files.copy():
+            if file_path in self.upload_queue:
+                self.upload_queue.remove(file_path)
+        
+        self.selected_upload_files.clear()
+        self.queue_select_all.active = False
+        self.update_upload_list()
+        self.update_status(f"Removed {removed_count} files from upload queue", "success")
+    
+    def _delete_from_device(self, dialog):
+        """Delete selected files from device."""
+        dialog.dismiss()
+        
         count = len(self.selected_device_files)
         file_list = "\n".join([doc.get('title', 'Unknown') for doc in self.selected_device_files[:5]])
         if count > 5:
             file_list += f"\n... and {count - 5} more files"
         
-        dialog = MDDialog(
-            title=f"Delete {count} Documents",
+        # Create confirmation dialog
+        confirm_dialog = MDDialog(
+            title=f"Delete {count} Documents from Device",
             text=f"Are you sure you want to delete these {count} documents from your ReMarkable device?\n\n{file_list}\n\nThis action cannot be undone.",
             buttons=[
                 MDRaisedButton(
                     text="CANCEL",
-                    on_release=lambda x: dialog.dismiss()
+                    on_release=lambda x: confirm_dialog.dismiss()
                 ),
                 MDRaisedButton(
                     text=f"DELETE {count} FILES",
                     theme_icon_color="Custom",
                     icon_color=(1, 0, 0, 1),
                     md_bg_color=[0.8, 0.2, 0.2, 1],
-                    on_release=lambda x: self._perform_batch_delete(dialog)
+                    on_release=lambda x: self._perform_device_delete(confirm_dialog)
                 )
             ]
         )
-        dialog.open()
+        confirm_dialog.open()
     
-    def _perform_batch_delete(self, dialog):
-        """Perform the actual batch delete operation."""
+    def _perform_device_delete(self, dialog):
+        """Perform the actual device delete operation."""
         dialog.dismiss()
         
-        # Start batch delete in background
-        threading.Thread(target=self._batch_delete_worker, daemon=True).start()
+        # Start delete in background
+        threading.Thread(target=self._device_delete_worker, daemon=True).start()
     
-    def _batch_delete_worker(self):
-        """Background worker for batch delete."""
+    def _device_delete_worker(self):
+        """Background worker for device delete with batch operation."""
         total_files = len(self.selected_device_files)
-        deleted_files = []
         
-        Clock.schedule_once(lambda dt: self.update_status(f"Starting batch delete of {total_files} file(s)...", "info"), 0)
+        Clock.schedule_once(lambda dt: self.update_status(f"Starting batch delete of {total_files} file(s) from device...", "info"), 0)
         
-        for i, doc in enumerate(self.selected_device_files):
-            try:
-                # Update progress
-                progress = (i / total_files) * 100
-                Clock.schedule_once(lambda dt, p=progress: setattr(self.progress_bar, 'value', p), 0)
-                
-                uuid = doc.get('uuid')
+        # Extract UUIDs for batch delete
+        uuids_to_delete = []
+        uuid_to_doc = {}
+        
+        for doc in self.selected_device_files:
+            uuid = doc.get('uuid')
+            if uuid:
+                uuids_to_delete.append(uuid)
+                uuid_to_doc[uuid] = doc
+            else:
                 title = doc.get('title', 'Unknown Document')
-                
-                Clock.schedule_once(lambda dt, t=title: self.update_status(f"Deleting '{t}'...", "info"), 0)
-                
-                if uuid and self.remarkable_service:
-                    if self.remarkable_service.delete_document(uuid):
-                        deleted_files.append(doc)
-                        Clock.schedule_once(lambda dt, t=title: self.update_status(f"Deleted '{t}'", "success"), 0)
-                    else:
-                        Clock.schedule_once(lambda dt, t=title: self.update_status(f"Failed to delete '{t}'", "error"), 0)
-                else:
-                    Clock.schedule_once(lambda dt, t=title: self.update_status(f"Cannot delete '{t}': missing UUID", "error"), 0)
-                    
-            except Exception as e:
-                Clock.schedule_once(lambda dt, t=title, err=str(e): self.update_status(f"Error deleting '{t}': {err}", "error"), 0)
+                Clock.schedule_once(lambda dt, t=title: self.update_status(f"Cannot delete '{t}': missing UUID", "error"), 0)
         
-        # Batch delete complete
-        Clock.schedule_once(lambda dt: setattr(self.progress_bar, 'value', 100), 0)
-        Clock.schedule_once(lambda dt: self.update_status(f"Batch delete complete: {len(deleted_files)}/{total_files} files deleted", "success"), 0)
+        if not uuids_to_delete:
+            Clock.schedule_once(lambda dt: self.update_status("No valid documents to delete", "error"), 0)
+            return
         
-        # Remove deleted files from local lists
-        for doc in deleted_files:
-            if doc in self.device_files:
-                self.device_files.remove(doc)
-            if doc in self.selected_device_files:
-                self.selected_device_files.remove(doc)
+        try:
+            # Use batch delete method
+            successful_uuids, failed_uuids = self.remarkable_service.batch_delete_documents(uuids_to_delete)
+            
+            # Update progress
+            Clock.schedule_once(lambda dt: setattr(self.progress_bar, 'value', 100), 0)
+            
+            # Log results
+            successful_docs = [uuid_to_doc[uuid] for uuid in successful_uuids if uuid in uuid_to_doc]
+            failed_docs = [uuid_to_doc[uuid] for uuid in failed_uuids if uuid in uuid_to_doc]
+            
+            Clock.schedule_once(lambda dt: self.update_status(f"Batch delete complete: {len(successful_docs)}/{total_files} files deleted (xochitl restarted once)", "success"), 0)
+            
+            # Remove successfully deleted files from local lists
+            for doc in successful_docs:
+                if doc in self.device_files:
+                    self.device_files.remove(doc)
+                if doc in self.selected_device_files:
+                    self.selected_device_files.remove(doc)
+            
+            # Log any failures
+            for doc in failed_docs:
+                title = doc.get('title', 'Unknown Document')
+                Clock.schedule_once(lambda dt, t=title: self.update_status(f"Failed to delete '{t}'", "error"), 0)
+            
+        except Exception as e:
+            Clock.schedule_once(lambda dt, err=str(e): self.update_status(f"Batch delete failed: {err}", "error"), 0)
         
-        # Update UI
+        # Update UI and reset select all checkbox
+        Clock.schedule_once(lambda dt: setattr(self.device_select_all, 'active', False), 0)
         Clock.schedule_once(lambda dt: self.update_device_files_list(), 0)
         
         # Reset progress after delay
